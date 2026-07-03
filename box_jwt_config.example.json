@@ -1,0 +1,13 @@
+{
+  "_comment": "This is a placeholder. Create a Box Custom App (Server Authentication / JWT) at https://app.box.com/developers/console, download its JWT config JSON, save it here as 'box_jwt_config.json', and fill in the real values below.",
+  "boxAppSettings": {
+    "clientID": "YOUR_BOX_CLIENT_ID",
+    "clientSecret": "YOUR_BOX_CLIENT_SECRET",
+    "appAuth": {
+      "publicKeyID": "YOUR_PUBLIC_KEY_ID",
+      "privateKey": "-----BEGIN ENCRYPTED PRIVATE KEY-----\nPASTE_YOUR_PRIVATE_KEY_HERE\n-----END ENCRYPTED PRIVATE KEY-----\n",
+      "passphrase": "YOUR_PRIVATE_KEY_PASSPHRASE"
+    }
+  },
+  "enterpriseID": "YOUR_BOX_ENTERPRISE_ID"
+}

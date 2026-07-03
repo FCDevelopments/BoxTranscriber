@@ -1,0 +1,16 @@
+# Secrets & local config
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Logs
+logs/
+*.log
+
+# Node & auth
+node_modules/
+node-v*/
+box_jwt_config.json
