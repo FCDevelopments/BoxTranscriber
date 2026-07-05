@@ -13,6 +13,10 @@ const os = require('os');
 const app = express();
 app.use(express.json());
 
+// Tracks files currently being processed, so duplicate webhook deliveries for
+// the same upload don't kick off a second transcription in parallel.
+const inFlight = new Set();
+
 const VIDEO_EXTENSIONS = new Set(['mp4', 'mov', 'avi', 'mkv']);
 const BOX_COMMENT_LIMIT = 9000;
 
@@ -39,9 +43,21 @@ const aai = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY });
 
 // ─── Box JWT client ───────────────────────────────────────────────────────────
 
-const _boxSDK = BoxSDK.getPreconfiguredInstance(
-  JSON.parse(fs.readFileSync(path.join(__dirname, 'box_jwt_config.json'), 'utf8'))
-);
+const BOX_CONFIG_PATH = path.join(__dirname, 'box_jwt_config.json');
+let _boxSDK;
+try {
+  _boxSDK = BoxSDK.getPreconfiguredInstance(
+    JSON.parse(fs.readFileSync(BOX_CONFIG_PATH, 'utf8'))
+  );
+} catch (err) {
+  console.error(
+    `FATAL: could not load Box config at ${BOX_CONFIG_PATH}\n` +
+    `  ${err.message}\n` +
+    `  Create it from box_jwt_config.example.json (Box Dev Console -> ` +
+    `download the JWT config JSON) before starting the server.`
+  );
+  process.exit(1);
+}
 const boxClient = _boxSDK.getAppAuthClient('enterprise');
 
 async function getBoxDownloadUrl(fileId) {
@@ -240,7 +256,17 @@ app.post('/webhook', (req, res) => {
     return;
   }
 
-  processFile(fileId, fileName, fileSize);
+  // Box may deliver the same webhook more than once (at-least-once delivery).
+  // Guard against processing a file twice concurrently; the transcript-comment
+  // check in processFile handles dedup across restarts.
+  if (inFlight.has(fileId)) {
+    console.log(`Already processing ${fileId}, ignoring duplicate webhook.`);
+    return;
+  }
+  inFlight.add(fileId);
+  Promise.resolve(processFile(fileId, fileName, fileSize)).finally(() =>
+    inFlight.delete(fileId)
+  );
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

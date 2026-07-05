@@ -11,6 +11,16 @@ async function main() {
     console.error('Usage: node create_webhook.js https://your-ngrok-url/webhook');
     process.exit(1);
   }
+  // Fail fast with a clear message rather than sending an unauthenticated /
+  // malformed request to Box.
+  const missing = [
+    !token && 'BOX_DEVELOPER_TOKEN',
+    !folderId && 'BOX_FOLDER_ID',
+  ].filter(Boolean);
+  if (missing.length) {
+    console.error(`Missing required env var(s): ${missing.join(', ')} (set them in .env)`);
+    process.exit(1);
+  }
 
   console.log(`Creating V2 webhook on folder ${folderId} -> ${webhookUrl}`);
 
@@ -21,7 +31,10 @@ async function main() {
       address: webhookUrl,
       triggers: ['FILE.UPLOADED'],
     },
-    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+    {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      timeout: 15000,
+    }
   );
 
   console.log('Webhook created!');
